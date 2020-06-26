@@ -1,0 +1,55 @@
+#!/bin/sh
+set -euf
+
+##
+# When the compaudit command prints warnings, then fix them.
+#
+# Usage:
+#
+#     compaudit-fixer
+#
+# Examples:
+#
+#     $ compaudit
+#     There are insecure directories and files:
+#     /usr/local/share/zsh/foo
+#     /usr/local/share/zsh/goo/hoo
+#
+#     $ compaudit | compaudit-fixer
+#     There are insecure files:
+#     + sudo chown user:group /usr/local/share/zsh/foo
+#     + sudo chmod 750 /usr/local/share/zsh/foo
+#     + sudo chown user:group /usr/local/share/zsh/goo/hoo
+#     + sudo chmod 750 /usr/local/share/zsh/goo/hoo
+#
+#
+# ## Implementation
+#
+# This script sets the user and group:
+#
+# * The user is the current system real user
+#
+# * The group is the first match of these: root, wheel, admin.
+#
+# This script sets the permissions to 750.
+#
+#
+# ## Tracking
+#
+# Version: 1.0.0
+# Created: 2020-06-26T02:26:07Z
+# Updated: 2020-06-26T03:31:52Z
+# License: GPL
+# Contact: Joel Parker Henderson (joel@joelparkerhenderson.com)
+##
+
+user=$(id -urn)
+group=$(groups | tr ' ' '\n' | grep -m1 '^\(root\|wheel\|admin\)$')
+
+while read path; do
+    test -e "$path" || continue
+	set -x
+    sudo chown "${user}:${group}" "$path"
+    sudo chmod 750 "$path"
+    { set +x; } 2>&-
+done
